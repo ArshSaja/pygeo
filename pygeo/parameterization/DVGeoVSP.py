@@ -363,6 +363,54 @@ class DVGeometryVSP(DVGeoSketch):
         """
         return len(self.DVs)
 
+    def _getDVOffsets(self):
+
+        return self.getNDV()
+
+
+    def convertSensitivityToDict(self, dIdx, out1D=False, useCompositeNames=False):
+        """
+        This function takes the result of totalSensitivity and
+        converts it to a dict for use in pyOptSparse
+
+        Parameters
+        ----------
+        dIdx : array
+           Flattened array of length getNDV(). Generally it comes from
+           a call to totalSensitivity()
+
+        out1D : boolean
+            If true, creates a 1D array in the dictionary instead of 2D.
+            This function is used in the matrix-vector product calculation.
+
+        useCompositeNames : boolean
+            Whether the sensitivity dIdx is with respect to the composite DVs or the original DVGeo DVs.
+            If False, the returned dictionary will have keys corresponding to the original set of geometric DVs.
+            If True,  the returned dictionary will have replace those with a single key corresponding to the composite DV name.
+
+        Returns
+        -------
+        dIdxDict : dictionary
+           Dictionary of the same information keyed by this object's
+           design variables
+        """
+
+        # compute the various DV offsets
+        DVCountGlobal= self._getDVOffsets()
+
+        i = DVCountGlobal
+        dIdxDict = {}
+        for key in self.DVs:
+            dv = self.DVs[key]
+            if out1D:
+                dIdxDict[key] = np.ravel(dIdx[:, i : i + dv.nVal])
+            else:
+                dIdxDict[key] = dIdx[:, i : i + dv.nVal]
+            i += dv.nVal
+
+
+        return dIdxDict
+
     def totalSensitivity(self, dIdpt, ptSetName, comm=None, config=None):
         r"""
         This function computes sensitivity information.
