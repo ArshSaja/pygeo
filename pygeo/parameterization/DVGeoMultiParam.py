@@ -284,7 +284,7 @@ class DVGeometryMultiParam:
                                 inComp = comp
 
                         else:
-                            print(
+                            raise Error(
                                 f"The point at (x, y, z) = ({points[i, 0]:.3f}, {points[i, 1]:.3f} {points[i, 2]:.3f})"
                                 + f"in point set {ptName} is inside multiple FFDs but a triangulated mesh "
                                 + f"for component {comp} is not provided to determine which component owns this point."
@@ -303,7 +303,7 @@ class DVGeometryMultiParam:
 
             # this point is outside any FFD...
             else:
-                print(
+                raise Error(
                     f"The point at (x, y, z) = ({points[i, 0]:.3f}, {points[i, 1]:.3f} {points[i, 2]:.3f}) "
                     + f"in point set {ptName} is not inside any FFDs."
                 )
