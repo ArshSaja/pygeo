@@ -37,6 +37,7 @@ class DVGeometryMultiParam:
         self.intersectComps = []
         self.checkDVs = checkDVs
         self.debug = debug
+        self.ptSetNames = []
 
     def addComponent(self, comp, DVGeo, triMesh=None, scale=1.0, bbox={},params=None,bboxForce=None,bboxForceTF=True):
         """
@@ -161,7 +162,7 @@ class DVGeometryMultiParam:
             This is typically only needed for the CFD surface mesh.
 
         """
-
+        self.ptSetNames.append(ptName)
         # if compList is not provided, we use all components
         if compNames is None:
             compNames = self.compNames
