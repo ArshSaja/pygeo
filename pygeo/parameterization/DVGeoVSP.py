@@ -396,9 +396,9 @@ class DVGeometryVSP(DVGeoSketch):
         """
 
         # compute the various DV offsets
-        DVCountGlobal= self._getDVOffsets()
+        # DVCountGlobal= self._getDVOffsets()
 
-        i = DVCountGlobal
+        i = 0
         dIdxDict = {}
         for key in self.DVs:
             dv = self.DVs[key]
