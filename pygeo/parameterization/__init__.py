@@ -17,3 +17,7 @@ try:
     from .DVGeoMulti import DVGeometryMulti
 except ImportError:
     pass
+try:
+    from .DVGeoMultiParam import DVGeometryMultiParam
+except ImportError:
+    pass

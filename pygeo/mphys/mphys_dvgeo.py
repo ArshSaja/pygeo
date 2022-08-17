@@ -6,6 +6,11 @@ try:
 except ImportError:
     # not everyone might have openvsp installed, and thats okay
     pass
+try:
+    from .. import DVGeometryMultiParam
+except ImportError:
+    # not everyone might have openvsp installed, and thats okay
+    pass
 from mpi4py import MPI
 import numpy as np
 
@@ -16,7 +21,8 @@ class OM_DVGEOCOMP(om.ExplicitComponent):
         self.options.declare("ffd_file", default=None)
         self.options.declare("vsp_file", default=None)
         self.options.declare("vsp_options", default=None)
-
+        self.options.declare("comp_FFD_options", default=None)
+        self.options.declare("comp_VSP_options", default=None)
     def setup(self):
 
         # create the DVGeo object that does the computations
@@ -29,6 +35,21 @@ class OM_DVGEOCOMP(om.ExplicitComponent):
             vsp_file = self.options["vsp_file"]
             vsp_options = self.options["vsp_options"]
             self.DVGeo = DVGeometryVSP(vsp_file, comm=self.comm, **vsp_options)
+        if self.options["vsp_file"] is not None and self.options["ffd_file"] is not None:
+            # we are doing a VSP based DVGeo
+            ffd_file = self.options["ffd_file"]
+            vsp_file = self.options["vsp_file"]
+            vsp_options = self.options["vsp_options"]
+            comp_FFD_options = self.options["comp_FFD_options"]
+            comp_VSP_options = self.options["comp_VSP_options"]
+
+            # Set up component DVGeo objects
+            self.DVGeoFFD = DVGeometry(ffd_file)
+            self.DVGeoVSP = DVGeometryVSP(vsp_file, comm=self.comm, **vsp_options)
+            # Set up DVGeometryMulti object
+            self.DVGeo = DVGeometryMultiParam()
+            self.DVGeo.addComponent("FFD", self.DVGeoFFD,params="FFD", **comp_FFD_options)
+            self.DVGeo.addComponent("VSP", self.DVGeoVSP,params="VSP",**comp_VSP_options)
 
         self.DVCon = DVConstraints()
         self.DVCon.setDVGeo(self.DVGeo)
@@ -93,58 +114,69 @@ class OM_DVGEOCOMP(om.ExplicitComponent):
         for k, v in point_dict.items():
             self.nom_addPointSet(v, k)
 
-    def nom_addGeoDVGlobal(self, dvName, value, func):
+    def nom_addGeoDVGlobal(self, dvName, value, func,comp=None):
         # define the input
         self.add_input(dvName, distributed=False, shape=len(value))
 
         # call the dvgeo object and add this dv
-        self.DVGeo.addGeoDVGlobal(dvName, value, func)
+        if comp is None:
+            self.DVGeo.addGlobalDV(dvName, value, func)
+        if comp == "FFD":
+            self.DVGeoFFD.addGlobalDV(dvName, value, func)
 
-    def nom_addGeoDVLocal(self, dvName, axis="y", pointSelect=None):
-        nVal = self.DVGeo.addGeoDVLocal(dvName, axis=axis, pointSelect=pointSelect)
+    def nom_addGeoDVLocal(self, dvName, axis="y", pointSelect=None,comp=None):
+        if comp is None:
+            nVal = self.DVGeo.addLocalDV(dvName, axis=axis, pointSelect=pointSelect)
+        if comp == "FFD":
+            nVal = self.DVGeoFFD.addLocalDV(dvName, axis=axis, pointSelect=pointSelect)
+        
         self.add_input(dvName, distributed=False, shape=nVal)
         return nVal
 
-    def nom_addVSPVariable(self, component, group, parm, **kwargs):
-
-        # actually add the DV to VSP
-        self.DVGeo.addVariable(component, group, parm, **kwargs)
+    def nom_addVSPVariable(self, component, group, parm,comp=None, **kwargs):
 
         # full name of this DV
         dvName = "%s:%s:%s" % (component, group, parm)
 
-        # get the value
-        val = self.DVGeo.DVs[dvName].value.copy()
+        # actually add the DV to VSP
+        if comp is None:
+            self.DVGeo.addVariable(component, group, parm, **kwargs)
+            # get the value
+            val = self.DVGeo.DVs[dvName].value.copy()
+        if comp == "VSP":
+            self.DVGeoVSP.addVariable(component, group, parm, **kwargs)
+            # get the value
+            val = self.DVGeoVSP.DVs[dvName].value.copy()
 
         # add the input with the correct value, VSP DVs always have a size of 1
         self.add_input(dvName, distributed=False, shape=1, val=val)
 
-    def nom_addThicknessConstraints2D(self, name, leList, teList, nSpan=10, nChord=10):
-        self.DVCon.addThicknessConstraints2D(leList, teList, nSpan, nChord, lower=1.0, name=name)
+    def nom_addThicknessConstraints2D(self, name, leList, teList, nSpan=10, nChord=10,comp=None):
+        self.DVCon.addThicknessConstraints2D(leList, teList, nSpan, nChord, lower=1.0, name=name,compNames=comp)
         comm = self.comm
         if comm.rank == 0:
             self.add_output(name, distributed=True, val=np.ones((nSpan * nChord,)), shape=nSpan * nChord)
         else:
             self.add_output(name, distributed=True, shape=(0,))
 
-    def nom_addThicknessConstraints1D(self, name, ptList, nCon, axis):
-        self.DVCon.addThicknessConstraints1D(ptList, nCon, axis, name=name)
+    def nom_addThicknessConstraints1D(self, name, ptList, nCon, axis,comp=None):
+        self.DVCon.addThicknessConstraints1D(ptList, nCon, axis, name=name,compNames=comp)
         comm = self.comm
         if comm.rank == 0:
             self.add_output(name, distributed=True, val=np.ones(nCon), shape=nCon)
         else:
             self.add_output(name, distributed=True, shape=(0))
 
-    def nom_addVolumeConstraint(self, name, leList, teList, nSpan=10, nChord=10):
-        self.DVCon.addVolumeConstraint(leList, teList, nSpan=nSpan, nChord=nChord, name=name)
+    def nom_addVolumeConstraint(self, name, leList, teList, nSpan=10, nChord=10,comp=None):
+        self.DVCon.addVolumeConstraint(leList, teList, nSpan=nSpan, nChord=nChord, name=name,compNames=comp)
         comm = self.comm
         if comm.rank == 0:
             self.add_output(name, distributed=True, val=1.0)
         else:
             self.add_output(name, distributed=True, shape=0)
 
-    def nom_add_LETEConstraint(self, name, volID, faceID, topID=None):
-        self.DVCon.addLeTeConstraints(volID, faceID, name=name, topID=topID)
+    def nom_add_LETEConstraint(self, name, volID, faceID, topID=None,comp=None):
+        self.DVCon.addLeTeConstraints(volID, faceID, name=name, topID=topID,comp=comp)
         # how many are there?
         conobj = self.DVCon.linearCon[name]
         nCon = len(conobj.indSetA)
@@ -182,9 +214,12 @@ class OM_DVGEOCOMP(om.ExplicitComponent):
         else:
             self.add_output(name, distributed=True, shape=0)
 
-    def nom_addRefAxis(self, **kwargs):
+    def nom_addRefAxis(self,comp=None, **kwargs):
         # we just pass this through
-        return self.DVGeo.addRefAxis(**kwargs)
+        if comp is None:
+            return self.DVGeo.addRefAxis(**kwargs)
+        if comp == "FFD":
+            return self.DVGeoFFD.addRefAxis(**kwargs)
 
     def nom_setConstraintSurface(self, surface):
         # constraint needs a triangulated reference surface at initialization

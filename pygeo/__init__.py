@@ -7,6 +7,7 @@ from .constraints import DVConstraints
 from .parameterization import DVGeometry
 from .parameterization import DVGeometryAxi
 
+
 try:
     from .parameterization import DVGeometryCST
 except ImportError:
@@ -21,5 +22,9 @@ except ImportError:
     pass
 try:
     from .parameterization import DVGeometryMulti
+except ImportError:
+    pass
+try:
+    from .parameterization import DVGeometryMultiParam
 except ImportError:
     pass

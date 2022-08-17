@@ -20,6 +20,13 @@ try:
 except ImportError:
     missing_pysurf = True
 
+try:
+    from pygeo import DVGeometryMultiParam
+
+    missing_pysurf = False
+except ImportError:
+    missing_pysurf = True
+
 
 def evalFunctionsSensFD(DVGeo, DVCon, fdstep=1e-2):
     funcs = {}

@@ -8,7 +8,7 @@ from baseclasses.utils import Error
 from pysurf import intersectionAPI, curveSearchAPI, utilitiesAPI, adtAPI, tsurf_tools, tecplot_interface
 
 
-class DVGeometryMulti:
+class DVGeometryMultiParam:
     """
     A class for manipulating multiple components using multiple FFDs
     and handling design changes near component intersections.
@@ -38,7 +38,7 @@ class DVGeometryMulti:
         self.checkDVs = checkDVs
         self.debug = debug
 
-    def addComponent(self, comp, DVGeo, triMesh=None, scale=1.0, bbox={},params=None):
+    def addComponent(self, comp, DVGeo, triMesh=None, scale=1.0, bbox={},params=None,bboxForce=None,bboxForceTF=True):
         """
         Method to add components to the DVGeometryMulti object.
 
@@ -83,8 +83,10 @@ class DVGeometryMulti:
         # we will need the bounding box information later on, so save this here
         if params=='FFD':
             xMin, xMax = DVGeo.FFD.getBounds()
-        else:
+        if params=='VSP':
             bboxVSP = []
+            xMin = np.zeros(3)
+            xMax = np.zeros(3)
             # bbox0=OrderedDict()
             ncomps = len(DVGeo.allComps)
             bboxMin = np.zeros((3, ncomps))
@@ -119,7 +121,7 @@ class DVGeometryMulti:
             xMax[2] = bbox["zmax"]
 
         # initialize the component object
-        self.comps[comp] = component(comp, DVGeo, nodes, triConn, triConnStack, barsConn, xMin, xMax,params)
+        self.comps[comp] = component(comp, DVGeo, nodes, triConn, triConnStack, barsConn, xMin, xMax,params,bboxForce,bboxForceTF=bboxForceTF)    
 
         # add the name to the list
         self.compNames.append(comp)
@@ -169,7 +171,7 @@ class DVGeometryMulti:
         for comp in compNames:
 
             # check if we have a trimesh for this component
-            if self.comps[comp].triMesh and self.comps[comp].params=='FFD':
+            if self.comps[comp].triMesh:
 
                 # Now we build the ADT using pySurf
                 # Set bounding box for new tree
@@ -223,16 +225,24 @@ class DVGeometryMulti:
                 xMax = self.comps[comp].xMax
                 xMin -= np.abs(xMin * boundTol) + boundTol
                 xMax += np.abs(xMax * boundTol) + boundTol
-
+                if self.comps[comp].bboxForce is not None:
+                    bboxMin =self.comps[comp].bboxForce[0]
+                    bboxMax =self.comps[comp].bboxForce[1]
+                else:
+                    bboxMin =    xMin
+                    bboxMax = xMax
                 # check if inside
                 if (
                     xMin[0] < points[i, 0] < xMax[0]
                     and xMin[1] < points[i, 1] < xMax[1]
                     and xMin[2] < points[i, 2] < xMax[2]
-                ):
+                ) and ((bboxMin[0] < points[i, 0] < bboxMax[0]
+                    and bboxMin[1] < points[i, 1] < bboxMax[1]
+                    and bboxMin[2] < points[i, 2] < bboxMax[2]) == self.comps[comp].bboxForceTF):
 
                     # add this component to the projection list
                     projList.append(comp)
+                    # print(self.comps[comp].params,points[i,:])
 
                     # this point was not inside any other FFD before
                     if not inFFD:
@@ -273,7 +283,7 @@ class DVGeometryMulti:
                                 inComp = comp
 
                         else:
-                            raise Error(
+                            print(
                                 f"The point at (x, y, z) = ({points[i, 0]:.3f}, {points[i, 1]:.3f} {points[i, 2]:.3f})"
                                 + f"in point set {ptName} is inside multiple FFDs but a triangulated mesh "
                                 + f"for component {comp} is not provided to determine which component owns this point."
@@ -292,7 +302,7 @@ class DVGeometryMulti:
 
             # this point is outside any FFD...
             else:
-                raise Error(
+                print(
                     f"The point at (x, y, z) = ({points[i, 0]:.3f}, {points[i, 1]:.3f} {points[i, 2]:.3f}) "
                     + f"in point set {ptName} is not inside any FFDs."
                 )
@@ -304,7 +314,7 @@ class DVGeometryMulti:
 
         # finally, we can deallocate the ADTs
         for comp in compNames:
-            if self.comps[comp].triMesh and self.comps[comp].params=='FFD':
+            if self.comps[comp].triMesh:
                 adtAPI.adtapi.adtdeallocateadts(comp)
 
         # mark this pointset as up to date
@@ -341,7 +351,7 @@ class DVGeometryMulti:
         for pointSet in self.updated:
             self.updated[pointSet] = False
 
-    def getValues(self):
+    def getValues(self,compNames=None):
         """
         Generic routine to return the current set of design variables.
         Values are returned in a dictionary format that would be suitable for a subsequent call to setDesignVars().
@@ -352,10 +362,14 @@ class DVGeometryMulti:
             Dictionary of design variables.
 
         """
+        if compNames is None:
+            compNames = self.compNames
+        else: 
+            compNames = compNames
 
         dvDict = {}
         # we need to loop over each DVGeo object and get the DVs
-        for comp in self.compNames:
+        for comp in compNames:
             dvDictComp = self.comps[comp].DVGeo.getValues()
             # we need to loop over these DVs
             for k, v in dvDictComp.items():
@@ -424,7 +438,7 @@ class DVGeometryMulti:
             nDV += self.comps[comp].DVGeo.getNDV()
         return nDV
 
-    def getVarNames(self, pyOptSparse=False):
+    def getVarNames(self,compNames=None, pyOptSparse=False):
         """
         Return a list of the design variable names.
         This is typically used when specifying a ``wrt=`` argument for pyOptSparse.
@@ -434,9 +448,12 @@ class DVGeometryMulti:
         optProb.addCon(.....wrt=DVGeo.getVarNames())
 
         """
+        # if compList is not provided, we use all components
+        if compNames is None:
+            compNames = self.compNames
         dvNames = []
         # create a list of DVs from each comp
-        for comp in self.compNames:
+        for comp in compNames:
             # first get the list of DVs from this component
             varNames = self.comps[comp].DVGeo.getVarNames()
 
@@ -715,7 +732,7 @@ class DVGeometryMulti:
 
 
 class component:
-    def __init__(self, name, DVGeo, nodes, triConn, triConnStack, barsConn, xMin, xMax,params):
+    def __init__(self, name, DVGeo, nodes, triConn, triConnStack, barsConn, xMin, xMax,params,bboxForce,bboxForceTF):
 
         # save the info
         self.name = name
@@ -727,6 +744,8 @@ class component:
         self.xMin = xMin
         self.xMax = xMax
         self.params = params
+        self.bboxForce = bboxForce
+        self.bboxForceTF = bboxForceTF
 
         # also a dictionary for DV names
         self.dvDict = {}

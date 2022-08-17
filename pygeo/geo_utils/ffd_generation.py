@@ -158,7 +158,7 @@ def write_wing_FFD_file(fileName, slices, N0, N1, N2, axes=None, dist=None):
     f.close()
 
 
-def createFittedWingFFD(surf, surfFormat, outFile, leList, teList, nSpan, nChord, absMargins, relMargins, liftIndex):
+def createFittedWingFFD(surf, surfFormat, outFile, leList, teList, nSpan, nChord, absMargins, relMargins, liftIndex,keepRootZero=False):
 
     """
     Generates a wing FFD with chordwise points that follow the airfoil geometry.
@@ -250,6 +250,8 @@ def createFittedWingFFD(surf, surfFormat, outFile, leList, teList, nSpan, nChord
 
     # y and z depend on the liftIndex
     if liftIndex == 2:
+        if keepRootZero:
+            FFDCoords[:, 0, :, 1] = FFDCoords[:, :, 0, 2]*0.0
         root = FFDCoords[:, :, 0, 2]
         tip = FFDCoords[:, :, -1, 2]
 
@@ -259,9 +261,11 @@ def createFittedWingFFD(surf, surfFormat, outFile, leList, teList, nSpan, nChord
         Ny = 2
         Nz = nSpanTotal
     elif liftIndex == 3:
+        if keepRootZero:
+            FFDCoords[:, 0, :, 1] = FFDCoords[:, 0, :, 1]*0.0
+
         root = FFDCoords[:, 0, :, 1]
         tip = FFDCoords[:, -1, :, 1]
-
         upperSurface = FFDCoords[:, :, 1, 2]
         lowerSurface = FFDCoords[:, :, 0, 2]
 
@@ -276,7 +280,7 @@ def createFittedWingFFD(surf, surfFormat, outFile, leList, teList, nSpan, nChord
     trailingEdge += chordLength * relMargins[0] + absMargins[0]
 
     span = np.max(tip - root)
-    root -= span * relMargins[1] + absMargins[1]
+    root -= span * relMargins[1] + absMargins[1] 
     tip += span * relMargins[1] + absMargins[1]
 
     thickness = upperSurface - lowerSurface
