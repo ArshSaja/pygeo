@@ -398,21 +398,14 @@ class DVGeometryVSP(DVGeoSketch):
         # compute the various DV offsets
         # DVCountGlobal= self._getDVOffsets()
 
-        # i = 0
-        # dIdxDict = {}
-        # for key in self.DVs:
-        #     dv = self.DVs[key]
-        #     if out1D:
-        #         dIdxDict[key] = np.ravel(dIdx[:, i : i + dv.nVal])
-        #     else:
-        #         dIdxDict[key] = dIdx[:, i : i + dv.nVal]
-        #     i += dv.nVal
-        
-        # Now convert to dict:
-        dIdxDict = {}
         i = 0
-        for dvName in self.DVs:
-            dIdxDict[dvName] = np.array(dIdx[:, i]).T
+        dIdxDict = {}
+        for key in self.DVs:
+            dv = self.DVs[key]
+            if out1D:
+                dIdxDict[key] = np.ravel(dIdx[:, i : i + 1])
+            else:
+                dIdxDict[key] = dIdx[:, i : i + 1]
             i += 1
 
 
