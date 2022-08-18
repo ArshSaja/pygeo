@@ -547,7 +547,7 @@ class DVGeometryMultiParam:
             # we only do this if this component has at least one DV
             if nDVComp > 0:
                 # this part of the sensitivity matrix is owned by this dvgeo
-                dIdxComp = DVGeo.convertSensitivityToDict(dIdx[:, dvOffset : dvOffset + nDVComp],out1D=True)
+                dIdxComp = DVGeo.convertSensitivityToDict(dIdx[:, dvOffset : dvOffset + nDVComp])
 
                 for k, v in dIdxComp.items():
                     dIdxDict[k] = v
