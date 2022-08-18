@@ -121,14 +121,14 @@ class OM_DVGEOCOMP(om.ExplicitComponent):
         # call the dvgeo object and add this dv
         if comp is None:
             self.DVGeo.addGlobalDV(dvName, value, func)
-        if comp == "FFD":
-            self.DVGeoFFD.addGlobalDV(dvName, value, func)
+        if comp == "multi":
+             self.DVGeo.comps["FFD"].DVGeo.addGlobalDV(dvName, value, func)
 
     def nom_addGeoDVLocal(self, dvName, axis="y", pointSelect=None,comp=None):
         if comp is None:
             nVal = self.DVGeo.addLocalDV(dvName, axis=axis, pointSelect=pointSelect)
-        if comp == "FFD":
-            nVal = self.DVGeoFFD.addLocalDV(dvName, axis=axis, pointSelect=pointSelect)
+        if comp == "multi":
+            nVal =  self.DVGeo.comps["FFD"].DVGeo.addLocalDV(dvName, axis=axis, pointSelect=pointSelect)
         
         self.add_input(dvName, distributed=False, shape=nVal)
         return nVal
@@ -143,10 +143,10 @@ class OM_DVGEOCOMP(om.ExplicitComponent):
             self.DVGeo.addVariable(component, group, parm, **kwargs)
             # get the value
             val = self.DVGeo.DVs[dvName].value.copy()
-        if comp == "VSP":
-            self.DVGeoVSP.addVariable(component, group, parm, **kwargs)
+        if comp == "multi":
+            self.DVGeo.comps["VSP"].DVGeo.addVariable(component, group, parm, **kwargs)
             # get the value
-            val = self.DVGeoVSP.DVs[dvName].value.copy()
+            val = self.DVGeo.comps["VSP"].DVGeo.DVs[dvName].value.copy()
 
         # add the input with the correct value, VSP DVs always have a size of 1
         self.add_input(dvName, distributed=False, shape=1, val=val)
@@ -214,12 +214,10 @@ class OM_DVGEOCOMP(om.ExplicitComponent):
         else:
             self.add_output(name, distributed=True, shape=0)
 
-    def nom_addRefAxis(self,comp=None, **kwargs):
+    def nom_addRefAxis(self, **kwargs):
         # we just pass this through
-        if comp is None:
-            return self.DVGeo.addRefAxis(**kwargs)
-        if comp == "FFD":
-            return self.DVGeoFFD.addRefAxis(**kwargs)
+        return self.DVGeo.addRefAxis(**kwargs)
+
 
     def nom_setConstraintSurface(self, surface):
         # constraint needs a triangulated reference surface at initialization
