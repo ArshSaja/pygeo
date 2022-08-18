@@ -521,7 +521,7 @@ class DVGeometryMultiParam:
 
         # reshape the dIdpt array from [N] * [nPt] * [3] to  [N] * [nPt*3]
         dIdpt = dIdpt.reshape((dIdpt.shape[0], dIdpt.shape[1] * 3))
-
+        # print('totalpo',dIdpt.shape[1])
         # jacobian for the pointset
         jac = self.points[ptSetName].jac
 
@@ -540,10 +540,12 @@ class DVGeometryMultiParam:
         # use respective DVGeo's convert to dict functionality
         dIdxDict = OrderedDict()
         dvOffset = 0
+        print('totalpo',dIdpt.shape[1])
         for comp in self.compNames:
             DVGeo = self.comps[comp].DVGeo
             nDVComp = DVGeo.getNDV()
-
+            
+            print(comp,len(self.points[ptSetName].compMap[comp]))
             # we only do this if this component has at least one DV
             if nDVComp > 0:
                 # this part of the sensitivity matrix is owned by this dvgeo
@@ -557,9 +559,105 @@ class DVGeometryMultiParam:
 
         if self.debug:
             print(f"[{self.comm.rank}] finished DVGeo.totalSensitivity")
-        print('dIdxDict',dIdxDict)
         return dIdxDict
 
+    def totalSensitivitynew(self, dIdpt, ptSetName, comm=None, config=None):
+        """
+        This function computes sensitivity information.
+
+        Specificly, it computes the following:
+        :math:`\\frac{dX_{pt}}{dX_{DV}}^T \\frac{dI}{d_{pt}}`
+
+        Parameters
+        ----------
+        dIdpt : array of size (Npt, 3) or (N, Npt, 3)
+
+            This is the total derivative of the objective or function
+            of interest with respect to the coordinates in
+            'ptSetName'. This can be a single array of size (Npt, 3)
+            **or** a group of N vectors of size (Npt, 3, N). If you
+            have many to do, it is faster to do many at once.
+
+        ptSetName : str
+            The name of set of points we are dealing with
+
+        comm : MPI.IntraComm, optional
+            The communicator to use to reduce the final derivative.
+            If comm is None, no reduction takes place.
+
+        config : str or list, optional
+            Define what configurations this design variable will be applied to
+            Use a string for a single configuration or a list for multiple
+            configurations. The default value of None implies that the design
+            variable appies to *ALL* configurations.
+
+
+        Returns
+        -------
+        dIdxDict : dict
+            The dictionary containing the derivatives, suitable for pyOptSparse.
+
+        Notes
+        -----
+        The ``child`` and ``nDVStore`` options are only used
+        internally and should not be changed by the user.
+
+        """
+
+        # Compute the total Jacobian for this point set
+        # TODO: this can be done without converting sparse matrices to dense
+        # or with a function for mat-vec products with all DVGeos
+        self._computeTotalJacobian(ptSetName)
+
+        # Make dIdpt at least 3D
+        if len(dIdpt.shape) == 2:
+            dIdpt = np.array([dIdpt])
+        N = dIdpt.shape[0]
+
+        # create a dictionary to save total sensitivity info that might come out of the ICs
+        compSensList = []
+
+        # reshape the dIdpt array from [N] * [nPt] * [3] to  [N] * [nPt*3]
+        dIdpt = dIdpt.reshape((dIdpt.shape[0], dIdpt.shape[1] * 3))
+
+        # jacobian for the pointset
+        jac = self.points[ptSetName].jac
+        ptSet = self.points[ptSetName]
+        # this is the mat-vec product for the remaining seeds.
+        # this only contains the effects of the FFD motion,
+        # projections and intersections are handled separately in compSens
+        dIdxT_local = jac.T.dot(dIdpt.T)
+        dIdx_local = dIdxT_local.T
+
+        # If we have a comm, globaly reduce with sum
+        if comm:
+            dIdx = comm.allreduce(dIdx_local, op=MPI.SUM)
+        else:
+            dIdx = dIdx_local
+
+        # use respective DVGeo's convert to dict functionality
+        dIdxDict = OrderedDict()
+        dIdxDict0 = OrderedDict()
+        dvOffset = 0
+        for comp in self.compNames:
+            DVGeo = self.comps[comp].DVGeo
+            nDVComp = DVGeo.getNDV()
+            dIdxDict0 = DVGeo.totalSensitivity(dIdx[:,ptSet.compMapFlat[comp]], ptSetName, comm, config) 
+            # we only do this if this component has at least one DV
+            if nDVComp > 0:
+                # this part of the sensitivity matrix is owned by this dvgeo
+                dIdxComp = DVGeo.convertSensitivityToDict(dIdx[:, dvOffset : dvOffset + nDVComp])
+
+                for k, v in dIdxComp.items():
+                    dIdxDict[k] = v
+
+                # also increment the offset
+                dvOffset += nDVComp
+
+        if self.debug:
+            print(f"[{self.comm.rank}] finished DVGeo.totalSensitivity")
+
+        return dIdxDict
 
     def totalSensitivityOLD(self, dIdpt, ptSetName, comm=None, config=None):
         """
