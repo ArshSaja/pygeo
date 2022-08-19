@@ -913,13 +913,13 @@ class DVGeometryMultiParam:
                     # This is not the best way to do this
                     # TODO: use sparse storage for these
                     compJ = self.comps[comp].DVGeo.JT[ptSetName].todense().T
-                    print('FFD',compJ)
+                    print('FFD',self.comps[comp].DVGeo.nPts[ptSetName],compJ)
                     # do it (kinda) vectorized
                     jac[ptSet.compMapFlat[comp], dvOffset : dvOffset + nDVComp] = compJ[:, :]
             else:
                 if self.comps[comp].DVGeo.pointSets[ptSetName].jac is not None:
                     compJ = self.comps[comp].DVGeo.pointSets[ptSetName].jac
-                    print('VSP',compJ)
+                    print('VSP',self.comps[comp].pointSets[ptSetName].nPts,compJ)
                     # do it (kinda) vectorized
                     jac[ptSet.compMapFlat[comp], dvOffset : dvOffset + nDVComp] = compJ[:, :]
             # increment the offset
