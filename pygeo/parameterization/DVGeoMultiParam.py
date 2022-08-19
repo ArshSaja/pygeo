@@ -651,8 +651,8 @@ class DVGeometryMultiParam:
         if self.debug:
             print(f"[{self.comm.rank}] finished DVGeo.totalSensitivity")
 
-        if comm:
-            print(dIdxDict)
+        # if comm:
+        #     print(dIdxDict)
         return dIdxDict
 
     def totalSensitivityOLD(self, dIdpt, ptSetName, comm=None, config=None):
