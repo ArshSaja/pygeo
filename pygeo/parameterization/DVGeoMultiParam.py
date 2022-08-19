@@ -919,7 +919,7 @@ class DVGeometryMultiParam:
             else:
                 if self.comps[comp].DVGeo.pointSets[ptSetName].jac is not None:
                     compJ = self.comps[comp].DVGeo.pointSets[ptSetName].jac
-                    print('VSP',self.comps[comp].pointSets[ptSetName].nPts,compJ)
+                    print('VSP',self.comps[comp].DVGeo.pointSets[ptSetName].nPts,compJ)
                     # do it (kinda) vectorized
                     jac[ptSet.compMapFlat[comp], dvOffset : dvOffset + nDVComp] = compJ[:, :]
             # increment the offset
