@@ -312,8 +312,7 @@ class DVGeometryMultiParam:
         for comp in self.compNames:
             compMap = self.points[ptName].compMap[comp]
             self.comps[comp].DVGeo.addPointSet(points[compMap], ptName)
-            print('totalpointsPart',comp,len(self.points[ptName].compMap[comp]))
-        print('totalpointsaero',self.points[ptName].nPts)
+
         
         # finally, we can deallocate the ADTs
         for comp in compNames:
