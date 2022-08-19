@@ -242,7 +242,6 @@ class OM_DVGEOCOMP(om.ExplicitComponent):
 
             for constraintname in self.constraintfuncsens:
                 for dvname in self.constraintfuncsens[constraintname]:
-                    print(constraintname, dvname)
                     if dvname in d_inputs:
                         dcdx = self.constraintfuncsens[constraintname][dvname]
                         if self.comm.rank == 0:
