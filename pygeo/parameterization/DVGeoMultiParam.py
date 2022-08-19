@@ -644,7 +644,7 @@ class DVGeometryMultiParam:
         for comp in self.compNames:
             DVGeo = self.comps[comp].DVGeo
             nDVComp = DVGeo.getNDV()
-            dIdxDict0 = DVGeo.totalSensitivity(dIdpt[:,ptSet.compMapFlat[comp],:], ptSetName, comm, config)
+            dIdxDict0 = DVGeo.totalSensitivity(dIdpt[:,ptSet.compMap[comp],:], ptSetName, comm, config)
             dIdxDict.update(dIdxDict0) 
             
 
