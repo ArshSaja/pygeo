@@ -620,7 +620,7 @@ class DVGeometryMultiParam:
         # compSensList = []
 
         # reshape the dIdpt array from [N] * [nPt] * [3] to  [N] * [nPt*3]
-        dIdpt = dIdpt.reshape((dIdpt.shape[0], dIdpt.shape[1] * 3))
+        # dIdpt = dIdpt.reshape((dIdpt.shape[0], dIdpt.shape[1] * 3))
 
         # jacobian for the pointset
         # jac = self.points[ptSetName].jac
@@ -644,7 +644,7 @@ class DVGeometryMultiParam:
         for comp in self.compNames:
             DVGeo = self.comps[comp].DVGeo
             nDVComp = DVGeo.getNDV()
-            dIdxDict0 = DVGeo.totalSensitivity(dIdpt[:,ptSet.compMapFlat[comp]], ptSetName, comm, config)
+            dIdxDict0 = DVGeo.totalSensitivity(dIdpt[:,ptSet.compMapFlat[comp],:], ptSetName, comm, config)
             dIdxDict.update(dIdxDict0) 
             
 
