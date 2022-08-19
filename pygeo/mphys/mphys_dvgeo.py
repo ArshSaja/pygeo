@@ -242,6 +242,7 @@ class OM_DVGEOCOMP(om.ExplicitComponent):
 
             for constraintname in self.constraintfuncsens:
                 for dvname in self.constraintfuncsens[constraintname]:
+                    print(constraintname, dvname)
                     if dvname in d_inputs:
                         dcdx = self.constraintfuncsens[constraintname][dvname]
                         if self.comm.rank == 0:
@@ -249,7 +250,7 @@ class OM_DVGEOCOMP(om.ExplicitComponent):
                             jvtmp = np.dot(np.transpose(dcdx), dout)
                         else:
                             jvtmp = 0.0
-                            
+
                         d_inputs[dvname] += jvtmp
                         # OM does the reduction itself
                         # d_inputs[dvname] += self.comm.reduce(jvtmp, op=MPI.SUM, root=0)
