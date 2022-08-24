@@ -60,7 +60,7 @@ class DVGeoSketch(BaseDVGeometry):
 
     """
 
-    def __init__(self, fileName, comm=MPI.COMM_WORLD, scale=1.0, projTol=0.01):
+    def __init__(self, fileName, comm=MPI.COMM_WORLD, scale=1.0, projTol=0.01,useCompostiveDVs=False,compositeDVs=None):
         super().__init__(fileName=fileName)
 
         # this scales coordinates from model to mesh geometry
@@ -74,6 +74,10 @@ class DVGeoSketch(BaseDVGeometry):
 
         # Initial list of DVs
         self.DVs = OrderedDict()
+
+        # Attributes for the composite DVs
+        self.useCompostiveDVs = useCompostiveDVs
+        self.compositeDVs = compositeDVs
 
     def getValues(self):
         """
@@ -101,7 +105,12 @@ class DVGeoSketch(BaseDVGeometry):
         --------
         optProb.addCon(.....wrt=DVGeo.getVarNames())
         """
-        return list(self.DVs.keys())
+        if not pyOptSparse or not self.useCompostiveDVs:
+            names = list(self.DVs.keys())
+        else:
+            names = [self.compositeDVs.name]
+
+        return names
 
     @abstractmethod
     def addVariable(self):
@@ -119,6 +128,36 @@ class DVGeoSketch(BaseDVGeometry):
         optProb : pyOpt_optimization class
             Optimization problem definition to which variables are added
         """
+
+         # then we simply return without adding any of the other DVs
+        if self.useCompostiveDVs:
+            dv = self.compositeDVs
+            optProb.addVarGroup(dv.name, dv.nVal, "c", value=dv.value, lower=dv.lower, upper=dv.upper, scale=dv.scale)
+
+            # add the linear DV constraints that replace the existing bounds!
+            lb = {}
+            ub = {}
+
+            for dvName in self.DVs:
+                dv = self.DVs[dvName]
+                lb[dvName] = dv.lower
+                ub[dvName] = dv.upper
+
+            lb = self.convertDictToSensitivity(lb)
+            ub = self.convertDictToSensitivity(ub)
+
+            optProb.addConGroup(
+                f"{self.DVComposite.name}_con",
+                self.getNDV(),
+                lower=lb,
+                upper=ub,
+                scale=1.0,
+                linear=True,
+                wrt=self.DVComposite.name,
+                jac={self.DVComposite.name: self.DVComposite.u},
+            )
+            return
+
         for dvName in self.DVs:
             dv = self.DVs[dvName]
             optProb.addVarGroup(dv.name, dv.nVal, "c", value=dv.value, lower=dv.lower, upper=dv.upper, scale=dv.scale)
