@@ -79,6 +79,7 @@ class DVGeoSketch(BaseDVGeometry):
         self.useCompostiveDVs = useCompostiveDVs
         self.compositeDVs = compositeDVs
 
+    
     def getValues(self):
         """
         Generic routine to return the current set of design
@@ -93,6 +94,9 @@ class DVGeoSketch(BaseDVGeometry):
         dvDict = OrderedDict()
         for dvName in self.DVs:
             dvDict[dvName] = self.DVs[dvName].value
+
+        if self.useCompostiveDVs:
+            dvDict = self.mapXDictToComp(dvDict)
 
         return dvDict
 

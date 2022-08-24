@@ -469,26 +469,7 @@ class DVGeometryVSP(DVGeoSketch):
             outDict[key] = inDict[key]
         return outDict
 
-    def mapXDictToComp(self, inDict):
-        """
-        The inverse of :func:`mapXDictToDVGeo`, where we map the DVs to the composite space
-
-        Parameters
-        ----------
-        inDict : dict
-            The DVs to be mapped
-
-        Returns
-        -------
-        dict
-            The mapped DVs
-        """
-        # first make a copy so we don't modify in place
-        inDict = copy.deepcopy(inDict)
-        userVec = self.convertDictToSensitivity(inDict)
-        outVec = self.mapVecToComp(userVec)
-        outDict = self.convertSensitivityToDict(outVec.reshape(1, -1), out1D=True, useCompositeNames=True)
-        return outDict
+    
 
     def mapVecToDVGeo(self, inVec):
         """
