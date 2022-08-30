@@ -399,7 +399,7 @@ class DVGeometryVSP(DVGeoSketch):
 
         return dIdx
 
-    def addCompositeDV(self, dvName, ptSetName=None, u=None, scale=None):
+    def addCompositeDV(self, dvName, ptSetName=None, u=None, scale=None,s=None,comm=None):
         """
         Add composite DVs. Note that this is essentially a preprocessing call which only works in serial
         at the moment.
@@ -423,13 +423,17 @@ class DVGeometryVSP(DVGeoSketch):
                 raise ValueError(f"The shapes don't match! Got shape = {u.shape} but NDV = {NDV}")
             if scale is None:
                 raise ValueError("If u is provided, then scale must also be provided.")
-            s = None
+            s = s
         else:
             if ptSetName is None:
                 raise ValueError("If u and s need to be computed, you must specify the ptSetName")
-            self._computeSurfJacobian()
+            if not self.updatedJac[ptSetName]:
+                self._computeSurfJacobian()
+            
             J_full = self.pointSets[ptSetName].jac
-            u, s, _ = np.linalg.svd(J_full)
+
+            u, s, _ = np.linalg.svd(J_full.T, full_matrices=False)
+
             scale = np.sqrt(s)
             # normalize the scaling
             scale = scale * (NDV / np.sum(scale))
@@ -442,34 +446,29 @@ class DVGeometryVSP(DVGeoSketch):
         self.DVComposite = geoDVComposite(dvName, values, NDV, u, scale=scale, s=s)
 
         self.useComposite = True
-        super().__init__(useCompostiveDVs=self.useComposite, compositeDVs=self.DVComposite)
+        self.useCompostiveDVs = True
+        self.compositeDVs = self.DVComposite
+        # super().__init__(useCompostiveDVs=self.useComposite, compositeDVs=self.DVComposite)
 
-    def mapXDictToDVGeo(self, inDict):
+    def mapXDictToComp(self, inDict):
         """
-        Map a dictionary of DVs to the 'DVGeo' design, while keeping non-DVGeo DVs in place
-        without modifying them
-
+        The inverse of :func:`mapXDictToDVGeo`, where we map the DVs to the composite space
         Parameters
         ----------
         inDict : dict
-            The dictionary of DVs to be mapped
-
+            The DVs to be mapped
         Returns
         -------
         dict
-            The mapped DVs in the same dictionary format
+            The mapped DVs
         """
         # first make a copy so we don't modify in place
         inDict = copy.deepcopy(inDict)
-        userVec = inDict.pop(self.DVComposite.name)
-        outVec = self.mapVecToDVGeo(userVec)
-        outDict = self.convertSensitivityToDict(outVec.reshape(1, -1), out1D=True, useCompositeNames=False)
-        # now merge inDict and outDict
-        for key in inDict:
-            outDict[key] = inDict[key]
+        userVec = self.convertDictToSensitivity(inDict)
+        outVec = self.mapVecToComp(userVec)
+        outDict = self.convertSensitivityToDict(outVec.reshape(1, -1), out1D=True, useCompositeNames=True)
         return outDict
 
-    
 
     def mapVecToDVGeo(self, inVec):
         """
@@ -504,8 +503,8 @@ class DVGeometryVSP(DVGeoSketch):
             The mapped DVs in a single 1D array
         """
         inVec = inVec.reshape(self.getNDV(), -1)
-        outVec = self.DVComposite.u.T @ inVec
-        return outVec.flatten()
+        # outVec = self.DVComposite.u.transpose() @ inVec
+        return inVec.flatten()
 
     def mapSensToComp(self, inVec):
         """
@@ -648,7 +647,7 @@ class DVGeometryVSP(DVGeoSketch):
 
         # map the sensitivities to composite 
         if self.useComposite:
-            dIdx = self.mapSensToComp(dIdx.T)
+            dIdx = self.mapSensToComp(dIdx)
             dIdxDict = self.convertSensitivityToDict(dIdx, useCompositeNames=True)
             # dIdx = dIdx.T
 

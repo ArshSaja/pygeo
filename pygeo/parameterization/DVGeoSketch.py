@@ -11,7 +11,9 @@ Enables the use of ESP (Engineering Sketch Pad) and OpenVSP (Open Vehicle Sketch
 # ======================================================================
 from abc import abstractmethod
 from collections import OrderedDict
+from copy import copy
 from mpi4py import MPI
+import copy
 from .BaseDVGeo import BaseDVGeometry
 from pyspline.utils import openTecplot, closeTecplot, writeTecplot1D
 
@@ -60,7 +62,7 @@ class DVGeoSketch(BaseDVGeometry):
 
     """
 
-    def __init__(self, fileName, comm=MPI.COMM_WORLD, scale=1.0, projTol=0.01,useCompostiveDVs=False,compositeDVs=None):
+    def __init__(self, fileName, comm=MPI.COMM_WORLD, scale=1.0, projTol=0.01):
         super().__init__(fileName=fileName)
 
         # this scales coordinates from model to mesh geometry
@@ -76,9 +78,33 @@ class DVGeoSketch(BaseDVGeometry):
         self.DVs = OrderedDict()
 
         # Attributes for the composite DVs
-        self.useCompostiveDVs = useCompostiveDVs
-        self.compositeDVs = compositeDVs
+        self.useCompostiveDVs = False
+        self.compositeDVs = None
 
+    def mapXDictToDVGeo(self, inDict):
+        """
+        Map a dictionary of DVs to the 'DVGeo' design, while keeping non-DVGeo DVs in place
+        without modifying them
+
+        Parameters
+        ----------
+        inDict : dict
+            The dictionary of DVs to be mapped
+
+        Returns
+        -------
+        dict
+            The mapped DVs in the same dictionary format
+        """
+        # first make a copy so we don't modify in place
+        inDict = copy.deepcopy(inDict)
+        userVec = inDict.pop(self.DVComposite.name)
+        outVec = self.mapVecToDVGeo(userVec)
+        outDict = self.convertSensitivityToDict(outVec.reshape(1, -1), out1D=True, useCompositeNames=False)
+        # now merge inDict and outDict
+        for key in inDict:
+            outDict[key] = inDict[key]
+        return outDict
     
     def getValues(self):
         """
