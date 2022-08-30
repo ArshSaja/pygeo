@@ -45,8 +45,9 @@ class OM_DVGEOCOMP(om.ExplicitComponent):
                     self.nom_addPointSet(inputs[var], var_out, add_output=False)
 
         # inputs are the geometric design variables
+        print('keys',inputs.keys())
         self.DVGeo.setDesignVars(inputs)
-
+        
         # ouputs are the coordinates of the pointsets we have
         for ptName in self.DVGeo.points:
             if ptName in self.omPtSetList:
@@ -105,7 +106,15 @@ class OM_DVGEOCOMP(om.ExplicitComponent):
         self.add_input(dvName, distributed=False, shape=nVal)
         return nVal
 
-    def nom_addVSPVariable(self, component, group, parm, **kwargs):
+    def nom_addGeoCompositeDV(self, dvName, ptSetName=None, u=None, scale=None,s=None):
+        # define the input
+        
+        self.add_input(dvName, distributed=False, shape=self.DVGeo.getNDV())
+
+        # call the dvgeo object and add this dv
+        self.DVGeo.addCompositeDV(dvName, ptSetName,u=u,scale=scale,s=s)
+
+    def nom_addVSPVariable(self, component, group, parm,add_input=True, **kwargs):
 
         # actually add the DV to VSP
         self.DVGeo.addVariable(component, group, parm, **kwargs)
@@ -117,7 +126,9 @@ class OM_DVGEOCOMP(om.ExplicitComponent):
         val = self.DVGeo.DVs[dvName].value.copy()
 
         # add the input with the correct value, VSP DVs always have a size of 1
-        self.add_input(dvName, distributed=False, shape=1, val=val)
+        if add_input:
+            self.add_input(dvName, distributed=False, shape=1, val=val)
+
 
     def nom_addThicknessConstraints2D(self, name, leList, teList, nSpan=10, nChord=10):
         self.DVCon.addThicknessConstraints2D(leList, teList, nSpan, nChord, lower=1.0, name=name)
