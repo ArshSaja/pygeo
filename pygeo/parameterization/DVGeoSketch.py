@@ -97,16 +97,8 @@ class DVGeoSketch(BaseDVGeometry):
             The mapped DVs in the same dictionary format
         """
         # first make a copy so we don't modify in place
-<<<<<<< HEAD
         
         print(inDict)
-=======
-        import sys
-        import numpy
-        numpy.set_printoptions(threshold=sys.maxsize)
-        if self.comm.rank==0:
-            print("inDict",inDict)
->>>>>>> af41de81b16598142a5facc67321927d00de5835
         inDict = copy.deepcopy(inDict)
         userVec = inDict[self.DVComposite.name]
         outVec = self.mapVecToDVGeo(userVec)
