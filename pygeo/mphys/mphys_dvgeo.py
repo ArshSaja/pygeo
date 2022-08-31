@@ -107,12 +107,13 @@ class OM_DVGEOCOMP(om.ExplicitComponent):
         return nVal
 
     def nom_addGeoCompositeDV(self, dvName, ptSetName=None, u=None, scale=None,s=None):
-        # define the input
         
-        self.add_input(dvName, distributed=False, shape=self.DVGeo.getNDV())
 
         # call the dvgeo object and add this dv
         self.DVGeo.addCompositeDV(dvName, ptSetName,u=u,scale=scale,s=s)
+        val = self.DVGeo.getValues()
+        # define the input
+        self.add_input(dvName, distributed=False, shape=self.DVGeo.getNDV(),val=val[dvName])
 
     def nom_addVSPVariable(self, component, group, parm,add_input=True, **kwargs):
 

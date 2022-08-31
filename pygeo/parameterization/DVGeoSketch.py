@@ -97,6 +97,8 @@ class DVGeoSketch(BaseDVGeometry):
             The mapped DVs in the same dictionary format
         """
         # first make a copy so we don't modify in place
+        
+        print(inDict)
         inDict = copy.deepcopy(inDict)
         userVec = inDict.pop(self.DVComposite.name)
         outVec = self.mapVecToDVGeo(userVec)
@@ -161,8 +163,7 @@ class DVGeoSketch(BaseDVGeometry):
 
          # then we simply return without adding any of the other DVs
         if self.useCompostiveDVs:
-            dv = self.compositeDVs
-            optProb.addVarGroup(dv.name, dv.nVal, "c", value=dv.value, lower=dv.lower, upper=dv.upper, scale=dv.scale)
+            
 
             # add the linear DV constraints that replace the existing bounds!
             lb = {}
@@ -175,7 +176,11 @@ class DVGeoSketch(BaseDVGeometry):
 
             lb = self.convertDictToSensitivity(lb)
             ub = self.convertDictToSensitivity(ub)
-
+            
+            self.compositeDVs.lower=lb
+            self.compositeDVs.upper=ub
+            dv = self.compositeDVs
+            optProb.addVarGroup(dv.name, dv.nVal, "c", value=dv.value, lower=dv.lower, upper=dv.upper, scale=dv.scale)
             optProb.addConGroup(
                 f"{self.DVComposite.name}_con",
                 self.getNDV(),

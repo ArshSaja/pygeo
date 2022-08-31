@@ -298,9 +298,11 @@ class DVGeometryVSP(DVGeoSketch):
             must correspond to the design variable names. Any
             additional keys in the dv-dictionary are simply ignored.
         """
+        
+        print(dvDict,dvDict.key())
         if self.useComposite:
             dvDict = self.mapXDictToDVGeo(dvDict)
-
+        
         # Just dump in the values
         for key in dvDict:
             if key in self.DVs:
