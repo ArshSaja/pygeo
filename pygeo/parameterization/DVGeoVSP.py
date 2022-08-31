@@ -297,7 +297,7 @@ class DVGeometryVSP(DVGeoSketch):
             must correspond to the design variable names. Any
             additional keys in the dv-dictionary are simply ignored.
         """
-        print(dvDict,dvDict.key())
+        print(dvDict)
         if self.useComposite:
             dvDict = self.mapXDictToDVGeo(dvDict)
 
@@ -385,7 +385,7 @@ class DVGeometryVSP(DVGeoSketch):
 
         print(inDict)
         inDict = copy.deepcopy(inDict)
-        userVec = inDict[self.DVComposite.name]
+        userVec = self.convertDictToSensitivity(inDict)
         outVec = self.mapVecToDVGeo(userVec)
         outDict = self.convertSensitivityToDict(outVec.reshape(1, -1), out1D=True, useCompositeNames=False)
         # now merge inDict and outDict
@@ -462,6 +462,12 @@ class DVGeometryVSP(DVGeoSketch):
         # we do this manually instead of calling self.mapVecToComp
         # because self.DVComposite.u isn't available yet
         values = u.T @ self.convertDictToSensitivity(self.getValues())
+
+        counter = 0
+        for key in self.DVs:
+            dv = self.DVs[key]
+            dv.scale=scale[counter]
+            counter += 1
 
         self.DVComposite = geoDVComposite(dvName, values, NDV, u, scale=scale, s=s)
 
@@ -660,23 +666,23 @@ class DVGeometryVSP(DVGeoSketch):
 
         if self.useComposite:
             dIdx = self.mapSensToComp(dIdx)
-            dIdxDict = self.convertSensitivityToDict(dIdx, useCompositeNames=True)
+            # dIdxDict = self.convertSensitivityToDict(dIdx, useCompositeNames=True)
             # dIdx = dIdx.T
 
-        else:
-            # Now convert to dict:
-            dIdxDict = {}
-            i = 0
-            for dvName in self.DVs:
-                dIdxDict[dvName] = np.array(dIdx[:, i]).T
-                i += 1
+        # else:
+        #     # Now convert to dict:
+        #     dIdxDict = {}
+        #     i = 0
+        #     for dvName in self.DVs:
+        #         dIdxDict[dvName] = np.array(dIdx[:, i]).T
+        #         i += 1
 
         # Now convert to dict:
-        # dIdxDict = {}
-        # i = 0
-        # for dvName in self.DVs:
-        #     dIdxDict[dvName] = np.array(dIdx[:, i]).T
-        #     i += 1
+        dIdxDict = {}
+        i = 0
+        for dvName in self.DVs:
+            dIdxDict[dvName] = np.array(dIdx[:, i]).T
+            i += 1
 
         return dIdxDict
 
