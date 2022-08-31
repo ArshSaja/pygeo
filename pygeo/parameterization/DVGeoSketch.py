@@ -97,10 +97,18 @@ class DVGeoSketch(BaseDVGeometry):
             The mapped DVs in the same dictionary format
         """
         # first make a copy so we don't modify in place
+<<<<<<< HEAD
         
         print(inDict)
+=======
+        import sys
+        import numpy
+        numpy.set_printoptions(threshold=sys.maxsize)
+        if self.comm.rank==0:
+            print("inDict",inDict)
+>>>>>>> af41de81b16598142a5facc67321927d00de5835
         inDict = copy.deepcopy(inDict)
-        userVec = inDict.pop(self.DVComposite.name)
+        userVec = inDict[self.DVComposite.name]
         outVec = self.mapVecToDVGeo(userVec)
         outDict = self.convertSensitivityToDict(outVec.reshape(1, -1), out1D=True, useCompositeNames=False)
         # now merge inDict and outDict
@@ -177,10 +185,16 @@ class DVGeoSketch(BaseDVGeometry):
 
             lb = self.convertDictToSensitivity(lb)
             ub = self.convertDictToSensitivity(ub)
+<<<<<<< HEAD
             
             # self.compositeDVs.lower=lb
             # self.compositeDVs.upper=ub
             
+=======
+            # print(lb,ub)
+            self.DVComposite.lower=lb
+            self.DVComposite.upper=ub
+>>>>>>> af41de81b16598142a5facc67321927d00de5835
             optProb.addConGroup(
                 f"{self.DVComposite.name}_con",
                 self.getNDV(),
@@ -192,10 +206,10 @@ class DVGeoSketch(BaseDVGeometry):
                 jac={self.DVComposite.name: self.DVComposite.u},
             )
             return
-
-        for dvName in self.DVs:
-            dv = self.DVs[dvName]
-            optProb.addVarGroup(dv.name, dv.nVal, "c", value=dv.value, lower=dv.lower, upper=dv.upper, scale=dv.scale)
+        else:
+            for dvName in self.DVs:
+                dv = self.DVs[dvName]
+                optProb.addVarGroup(dv.name, dv.nVal, "c", value=dv.value, lower=dv.lower, upper=dv.upper, scale=dv.scale)
 
     def writePointSet(self, name, fileName):
         """
