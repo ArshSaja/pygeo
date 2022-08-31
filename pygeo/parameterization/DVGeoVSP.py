@@ -297,9 +297,14 @@ class DVGeometryVSP(DVGeoSketch):
             must correspond to the design variable names. Any
             additional keys in the dv-dictionary are simply ignored.
         """
-        print(dvDict)
+        # print(dvDict)
+        DVDict= {}
         if self.useComposite:
-            dvDict = self.mapXDictToDVGeo(dvDict)
+            for key in dvDict:
+                if key in self.DVs:
+                    print(key)
+                DVDict[key]=dvDict[key]
+            dvDict = self.mapXDictToDVGeo(DVDict)
 
         # Just dump in the values
         for key in dvDict:
@@ -383,14 +388,17 @@ class DVGeometryVSP(DVGeoSketch):
         """
         # first make a copy so we don't modify in place
 
-        print(inDict)
+        print('0',inDict)
         inDict = copy.deepcopy(inDict)
         userVec = self.convertDictToSensitivity(inDict)
+        print('Dicts',userVec)
         outVec = self.mapVecToDVGeo(userVec)
+        print('MpaDicts',outVec)
         outDict = self.convertSensitivityToDict(outVec.reshape(1, -1), out1D=True, useCompositeNames=False)
+        print('OUTdict',outDict)
         # now merge inDict and outDict
-        # for key in inDict:
-        #     outDict[key] = inDict[key]
+        for key in inDict:
+            outDict[key] = inDict[key]
         return outDict
 
     def convertDictToSensitivity(self, dIdxDict):
