@@ -303,6 +303,8 @@ class DVGeometryVSP(DVGeoSketch):
             for key in dvDict:
                 if key in self.DVs:
                     DVDict[key]=dvDict[key]
+                    if self.comm.rank==0:
+                        print(key)
             dvDict = self.mapXDictToDVGeo(DVDict)
 
         # Just dump in the values
@@ -386,15 +388,16 @@ class DVGeometryVSP(DVGeoSketch):
             The mapped DVs in the same dictionary format
         """
         # first make a copy so we don't modify in place
-
-        print('0',inDict)
+        if self.comm.rank==0:
+            print('0',inDict)
         inDict = copy.deepcopy(inDict)
         userVec = self.convertDictToSensitivity(inDict)
-        print('Dicts',userVec)
         outVec = self.mapVecToDVGeo(userVec)
-        print('MpaDicts',outVec)
+        if self.comm.rank==0:
+            print('MpaDicts',outVec)
         outDict = self.convertSensitivityToDict(outVec.reshape(1, -1), out1D=True, useCompositeNames=False)
-        print('OUTdict',outDict)
+        if self.comm.rank==0:
+            print('OUTdict',outDict)
         # now merge inDict and outDict
         for key in inDict:
             outDict[key] = inDict[key]
@@ -424,6 +427,8 @@ class DVGeometryVSP(DVGeoSketch):
             dv = self.DVs[key]
             dIdx[i : i + dv.nVal] = dIdxDict[key]
             i += dv.nVal
+            if self.comm.rank==0:
+                print(key)
 
         return dIdx
 
@@ -469,7 +474,10 @@ class DVGeometryVSP(DVGeoSketch):
         # we do this manually instead of calling self.mapVecToComp
         # because self.DVComposite.u isn't available yet
         values = u.T @ self.convertDictToSensitivity(self.getValues())
-
+        if self.comm.rank==0:
+            print("Values",values)
+            print("ValuesR",u @ values)
+            print(list(self.DVs.keys()))
         counter = 0
         for key in self.DVs:
             dv = self.DVs[key]
@@ -533,7 +541,7 @@ class DVGeometryVSP(DVGeoSketch):
             The mapped DVs in a single 1D array
         """
         inVec = inVec.reshape(self.getNDV(), -1)
-        outVec = self.DVComposite.u.transpose() @ inVec
+        outVec = self.DVComposite.u.T @ inVec
         return outVec.flatten()
 
     def mapSensToComp(self, inVec):

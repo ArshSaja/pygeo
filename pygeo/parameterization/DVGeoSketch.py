@@ -125,10 +125,12 @@ class DVGeoSketch(BaseDVGeometry):
         optProb : pyOpt_optimization class
             Optimization problem definition to which variables are added
         """
+        print('yess')
         # add the linear DV constraints that replace the existing bounds!
         if self.useCompostiveDVs:
             dvComp = self.compositeDVs
             dvCompVal = dvComp.value
+            dvCompScal = dvComp.scale
             # optProb.addVarGroup(dv.name, dv.nVal, "c", value=dv.value, lower=dv.lower, upper=dv.upper, scale=dv.scale)
             lb = {}
             ub = {}
@@ -137,25 +139,26 @@ class DVGeoSketch(BaseDVGeometry):
                 dv = self.DVs[dvName]
                 lb[dvName] = dv.lower
                 ub[dvName] = dv.upper
-                optProb.addVarGroup(dv.name, dv.nVal, "c", value=dvCompVal[countK], lower=dv.lower, upper=dv.upper, scale=dv.scale)
+                optProb.addVarGroup(dv.name, dv.nVal, "c", value=dvCompVal[countK], lower=dvComp.lower, upper=dvComp.upper, scale=dvCompScal[countK])
                 countK += 1
 
-            lb = self.convertDictToSensitivity(lb)
-            ub = self.convertDictToSensitivity(ub)
+                lb = self.convertDictToSensitivity(lb)
+                ub = self.convertDictToSensitivity(ub)
 
             # self.compositeDVs.lower=lb
             # self.compositeDVs.upper=ub
 
-            optProb.addConGroup(
-                f"{self.DVComposite.name}_con",
-                self.getNDV(),
-                lower=lb,
-                upper=ub,
+                optProb.addConGroup(
+                f"{dvName}_con",
+                1,
+                lower=dv.lower,
+                upper=dv.upper,
                 scale=1.0,
                 linear=True,
-                wrt=self.DVComposite.name,
-                jac={self.DVComposite.name: self.DVComposite.u},
-            )
+                wrt=dvName,
+                jac={dvName: self.DVComposite.u[:,countK]},
+                )
+                countK += 1
             return
         for dvName in self.DVs:
             dv = self.DVs[dvName]
