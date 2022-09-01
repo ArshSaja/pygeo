@@ -93,6 +93,9 @@ class DVGeoSketch(BaseDVGeometry):
         for dvName in self.DVs:
             dvDict[dvName] = self.DVs[dvName].value
 
+        if self.useCompostiveDVs:
+            dvDict = self.mapXDictToComp(dvDict)
+
         return dvDict
 
     def getVarNames(self, pyOptSparse=False):
@@ -124,16 +127,18 @@ class DVGeoSketch(BaseDVGeometry):
         """
         # add the linear DV constraints that replace the existing bounds!
         if self.useCompostiveDVs:
-            # dv = self.compositeDVs
+            dvComp = self.compositeDVs
+            dvCompVal = dvComp.value
             # optProb.addVarGroup(dv.name, dv.nVal, "c", value=dv.value, lower=dv.lower, upper=dv.upper, scale=dv.scale)
             lb = {}
             ub = {}
-
+            countK =0
             for dvName in self.DVs:
                 dv = self.DVs[dvName]
                 lb[dvName] = dv.lower
                 ub[dvName] = dv.upper
-                optProb.addVarGroup(dv.name, dv.nVal, "c", value=dv.value, lower=dv.lower, upper=dv.upper, scale=dv.scale)
+                optProb.addVarGroup(dv.name, dv.nVal, "c", value=dvCompVal[countK], lower=dv.lower, upper=dv.upper, scale=dv.scale)
+                countK += 1
 
             lb = self.convertDictToSensitivity(lb)
             ub = self.convertDictToSensitivity(ub)

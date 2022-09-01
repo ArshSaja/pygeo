@@ -302,8 +302,7 @@ class DVGeometryVSP(DVGeoSketch):
         if self.useComposite:
             for key in dvDict:
                 if key in self.DVs:
-                    print(key)
-                DVDict[key]=dvDict[key]
+                    DVDict[key]=dvDict[key]
             dvDict = self.mapXDictToDVGeo(DVDict)
 
         # Just dump in the values
@@ -475,6 +474,7 @@ class DVGeometryVSP(DVGeoSketch):
         for key in self.DVs:
             dv = self.DVs[key]
             dv.scale=scale[counter]
+            # dv.value=values[counter]
             counter += 1
 
         self.DVComposite = geoDVComposite(dvName, values, NDV, u, scale=scale, s=s)
@@ -500,7 +500,7 @@ class DVGeometryVSP(DVGeoSketch):
         inDict = copy.deepcopy(inDict)
         userVec = self.convertDictToSensitivity(inDict)
         outVec = self.mapVecToComp(userVec)
-        outDict = self.convertSensitivityToDict(outVec.reshape(1, -1), out1D=True, useCompositeNames=True)
+        outDict = self.convertSensitivityToDict(outVec.reshape(1, -1), out1D=True, useCompositeNames=False)
         return outDict
 
 
