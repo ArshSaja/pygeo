@@ -42,6 +42,24 @@ class ThicknessConstraint(GeometricConstraint):
         self.coords = self.DVGeo.update(self.name, config=config)
         D = np.zeros(self.nCon)
         for i in range(self.nCon):
+            D[i] = self.coords[2 * i] - self.coords[2 * i + 1]
+            if self.scaled:
+                D[i] /= self.D0[i]
+        funcs[self.name] = D
+
+    def evalFunctions_old(self, funcs, config):
+        """
+        Evaluate the functions this object has and place in the funcs dictionary
+
+        Parameters
+        ----------
+        funcs : dict
+            Dictionary to place function values
+        """
+        # Pull out the most recent set of coordinates:
+        self.coords = self.DVGeo.update(self.name, config=config)
+        D = np.zeros(self.nCon)
+        for i in range(self.nCon):
             D[i] = geo_utils.norm.euclideanNorm(self.coords[2 * i] - self.coords[2 * i + 1])
             if self.scaled:
                 D[i] /= self.D0[i]
