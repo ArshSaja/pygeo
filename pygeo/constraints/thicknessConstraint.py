@@ -29,7 +29,7 @@ class ThicknessConstraint(GeometricConstraint):
         for i in range(self.nCon):
             self.D0[i] = geo_utils.norm.euclideanNorm(self.coords[2 * i] - self.coords[2 * i + 1])
 
-    def evalFunctions_v1(self, funcs, config):
+    def evalFunctions(self, funcs, config):
         """
         Evaluate the functions this object has and place in the funcs dictionary
 
@@ -47,7 +47,7 @@ class ThicknessConstraint(GeometricConstraint):
                 D[i] /= self.D0[i]
         funcs[self.name] = D
 
-    def evalFunctions(self, funcs, config):
+    def evalFunctions_old(self, funcs, config):
         """
         Evaluate the functions this object has and place in the funcs dictionary
 
